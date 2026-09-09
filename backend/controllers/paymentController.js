@@ -1,5 +1,6 @@
 const Payment = require("../models/Payment");
 const Order = require("../models/Order");
+const Receipt = require("../models/Receipt");
 
 // MARK PAYMENT AS PAID
 
@@ -125,15 +126,35 @@ const getAllPayments = async (req, res) => {
   try {
     const payments = await Payment.find()
       .populate("user", "name email phone")
-      .populate("order", "subtotal deliveryCharge totalAmount orderStatus")
+      .populate(
+        "order",
+        "subtotal deliveryCharge totalAmount orderStatus receipt",
+      )
+      .populate("order.receipt", "receiptNumber")
       .sort({
         createdAt: -1,
       });
 
+    const paymentsWithReceipts = await Promise.all(
+      payments.map(async (payment) => {
+        if (payment.order && !payment.order.receipt) {
+          const receipt = await Receipt.findOne({ order: payment.order._id })
+            .select("receiptNumber")
+            .lean();
+
+          if (receipt) {
+            payment.order.receipt = receipt;
+          }
+        }
+
+        return payment;
+      }),
+    );
+
     res.status(200).json({
       success: true,
-      count: payments.length,
-      payments,
+      count: paymentsWithReceipts.length,
+      payments: paymentsWithReceipts,
     });
   } catch (error) {
     console.error("Get All Payments Error:", error);
