@@ -344,6 +344,16 @@ const OrderDetails = () => {
                 </span>
               </div>
 
+              {Number(order.discountAmount) > 0 && (
+                <div className="flex justify-between text-sm text-emerald-700">
+                  <span>Coupon discount ({order.couponCode})</span>
+
+                  <span className="font-medium">
+                    − Rs. {Number(order.discountAmount).toFixed(2)}
+                  </span>
+                </div>
+              )}
+
               <div className="border-t border-slate-200 pt-4">
                 <div className="flex justify-between">
                   <span className="font-bold">Total</span>

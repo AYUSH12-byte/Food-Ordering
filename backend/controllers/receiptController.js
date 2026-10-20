@@ -189,6 +189,12 @@ const downloadReceipt = async (req, res) => {
 
     doc.text(`Delivery Charge: Rs. ${order.deliveryCharge.toFixed(2)}`);
 
+    if (order.discountAmount > 0) {
+      doc.text(
+        `Coupon Discount (${order.couponCode}): - Rs. ${order.discountAmount.toFixed(2)}`,
+      );
+    }
+
     doc.moveDown(0.5);
 
     doc

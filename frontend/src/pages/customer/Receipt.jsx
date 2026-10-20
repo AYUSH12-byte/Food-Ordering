@@ -246,6 +246,15 @@ const Receipt = () => {
               </span>
             </div>
 
+            {Number(order?.discountAmount) > 0 && (
+              <div className="flex justify-between text-sm text-emerald-700">
+                <span>Coupon discount ({order.couponCode})</span>
+                <span className="font-medium">
+                  − Rs. {Number(order.discountAmount).toFixed(2)}
+                </span>
+              </div>
+            )}
+
             <div className="flex justify-between border-t border-slate-200 pt-4">
               <span className="text-lg font-bold text-slate-900">Total</span>
 

@@ -21,6 +21,7 @@
 - View digital payment receipts (PDF)
 - Submit feedback and ratings
 - Manage personal profile
+- Apply fixed-amount coupon codes at checkout
 
 ### 🛡️ Admin Panel
 - Dashboard with sales analytics & charts
@@ -29,6 +30,7 @@
 - View payments and generate reports
 - Manage customer accounts
 - Read and respond to customer feedback
+- Create, activate, and manage expiring discount coupons
 
 ---
 
@@ -143,6 +145,9 @@ port, update `VITE_API_URL` in `/frontend/.env` to match.
 | GET | `/api/foods` | Get all foods |
 | POST | `/api/orders` | Place an order |
 | GET | `/api/orders/:id` | Get order details |
+| POST | `/api/coupons/validate` | Validate a coupon for the customer's cart |
+| GET | `/api/coupons/available` | List active coupons for customers |
+| GET / POST | `/api/coupons` | List or create coupons (admin) |
 | GET | `/api/admin/dashboard` | Admin stats |
 
 ---

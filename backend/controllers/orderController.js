@@ -5,6 +5,7 @@ const Receipt = require("../models/Receipt");
 const Counter = require("../models/Counter");
 const Food = require("../models/Food");
 const mongoose = require("mongoose");
+const Coupon = require("../models/Coupon");
 
 const DELIVERY_CHARGE = 50;
 
@@ -34,12 +35,15 @@ const generateReceiptNumber = async () => {
 // ==========================================
 
 const createOrder = async (req, res) => {
+  let claimedCouponId = null;
+
   try {
     const {
       deliveryAddress,
       deliveryPhone,
       deliveryNote = "",
       paymentMethod = "Cash on Delivery",
+      couponCode = "",
     } = req.body;
 
     // ------------------------------------------
@@ -150,11 +154,40 @@ const createOrder = async (req, res) => {
 
     const deliveryCharge = DELIVERY_CHARGE;
 
+    let coupon = null;
+    let discountAmount = 0;
+
+    if (couponCode) {
+      coupon = await Coupon.findOneAndUpdate(
+        {
+          code: String(couponCode).trim().toUpperCase(),
+          isActive: true,
+          expiresAt: { $gt: new Date() },
+          $or: [
+            { maxUses: null },
+            { $expr: { $lt: ["$usedCount", "$maxUses"] } },
+          ],
+        },
+        { $inc: { usedCount: 1 } },
+        { new: true, runValidators: true },
+      );
+
+      if (!coupon) {
+        return res.status(400).json({
+          success: false,
+          message: "Coupon is invalid, expired, or has reached its usage limit",
+        });
+      }
+
+      claimedCouponId = coupon._id;
+      discountAmount = Math.min(coupon.amount, subtotal);
+    }
+
     // ------------------------------------------
     // FINAL TOTAL
     // ------------------------------------------
 
-    const totalAmount = subtotal + deliveryCharge;
+    const totalAmount = subtotal - discountAmount + deliveryCharge;
 
     // ------------------------------------------
     // CREATE ORDER
@@ -170,6 +203,10 @@ const createOrder = async (req, res) => {
       deliveryCharge,
 
       totalAmount,
+
+      couponCode: coupon?.code || "",
+
+      discountAmount,
 
       deliveryAddress: deliveryAddress.trim(),
 
@@ -284,6 +321,17 @@ const createOrder = async (req, res) => {
     });
   } catch (error) {
     console.error("Create Order Error:", error);
+
+    if (claimedCouponId) {
+      try {
+        await Coupon.updateOne(
+          { _id: claimedCouponId, usedCount: { $gt: 0 } },
+          { $inc: { usedCount: -1 } },
+        );
+      } catch (rollbackError) {
+        console.error("Coupon Usage Rollback Error:", rollbackError);
+      }
+    }
 
     // Handle duplicate errors
     if (error.code === 11000) {

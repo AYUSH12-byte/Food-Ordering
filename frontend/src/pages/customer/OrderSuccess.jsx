@@ -116,6 +116,17 @@ const OrderSuccess = () => {
                 </p>
               </div>
 
+              {Number(order.discountAmount) > 0 && (
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">
+                    Coupon Discount · {order.couponCode}
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-emerald-700">
+                    − Rs. {Number(order.discountAmount).toFixed(2)}
+                  </p>
+                </div>
+              )}
+
               {/* Payment */}
 
               <div>

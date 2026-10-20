@@ -7,6 +7,7 @@ import {
   CreditCard,
   MessageSquare,
   Users,
+  Tag,
   LogOut,
   UtensilsCrossed,
   ExternalLink,
@@ -49,6 +50,11 @@ const AdminSidebar = ({ mobileOpen, setMobileOpen }) => {
       label: "Payments",
       path: "/admin/payments",
       icon: CreditCard,
+    },
+    {
+      label: "Coupons",
+      path: "/admin/coupons",
+      icon: Tag,
     },
     {
       label: "Feedback",

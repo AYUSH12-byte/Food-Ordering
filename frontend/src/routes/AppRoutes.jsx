@@ -27,6 +27,7 @@ import AdminOrders from "../pages/admin/Orders";
 import AdminPayments from "../pages/admin/Payments";
 import AdminFeedback from "../pages/admin/Feedback";
 import Customers from "../pages/admin/Customers";
+import Coupons from "../pages/admin/Coupons";
 
 const AppRoutes = () => {
   return (
@@ -94,6 +95,8 @@ const AppRoutes = () => {
           <Route path="/admin/feedback" element={<AdminFeedback />} />
 
           <Route path="/admin/customers" element={<Customers />} />
+
+          <Route path="/admin/coupons" element={<Coupons />} />
         </Route>
       </Route>
 

@@ -117,6 +117,14 @@ const OrderDetailsModal = ({ order, onClose }) => {
             <span>Delivery Charge</span>
             <span className="font-medium">Rs. {Number(order.deliveryCharge).toFixed(2)}</span>
           </div>
+          {Number(order.discountAmount) > 0 && (
+            <div className="flex justify-between text-emerald-300">
+              <span>Coupon discount ({order.couponCode})</span>
+              <span className="font-medium">
+                − Rs. {Number(order.discountAmount).toFixed(2)}
+              </span>
+            </div>
+          )}
           <div className="flex justify-between border-t border-slate-800 pt-2 text-sm">
             <span className="font-bold">Total Amount</span>
             <span className="text-lg font-extrabold text-orange-400">
