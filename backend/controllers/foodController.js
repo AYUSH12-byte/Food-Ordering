@@ -1,5 +1,7 @@
 const Food = require("../models/Food");
 const Category = require("../models/Category");
+const Feedback = require("../models/Feedback");
+const Order = require("../models/Order");
 
 // CREATE FOOD
 
@@ -113,14 +115,48 @@ const getFoods = async (req, res) => {
       filter.isAvailable = available === "true";
     }
 
-    const foods = await Food.find(filter)
-      .populate("category", "name")
-      .sort({ createdAt: -1 });
+    const [foods, foodRatings] = await Promise.all([
+      Food.find(filter)
+        .populate("category", "name")
+        .sort({ createdAt: -1 }),
+      Feedback.aggregate([
+        {
+          $lookup: {
+            from: Order.collection.name,
+            localField: "order",
+            foreignField: "_id",
+            as: "order",
+          },
+        },
+        { $unwind: "$order" },
+        { $unwind: "$order.items" },
+        {
+          $group: {
+            _id: "$order.items.food",
+            averageRating: { $avg: "$rating" },
+            reviewCount: { $sum: 1 },
+          },
+        },
+      ]),
+    ]);
+
+    const ratingsByFoodId = new Map(
+      foodRatings.map((rating) => [String(rating._id), rating]),
+    );
+    const foodsWithRatings = foods.map((food) => {
+      const rating = ratingsByFoodId.get(String(food._id));
+
+      return {
+        ...food.toObject(),
+        averageRating: rating?.averageRating ?? null,
+        reviewCount: rating?.reviewCount ?? 0,
+      };
+    });
 
     res.status(200).json({
       success: true,
-      count: foods.length,
-      foods,
+      count: foodsWithRatings.length,
+      foods: foodsWithRatings,
     });
   } catch (error) {
     console.error("Get Foods Error:", error);

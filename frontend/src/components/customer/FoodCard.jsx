@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Clock, Plus, Check, Star, ShoppingCart } from "lucide-react";
+import { Clock, Check, Star, ShoppingCart } from "lucide-react";
 
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
@@ -105,8 +105,15 @@ const FoodCard = ({ food }) => {
           <div className="mt-4 flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
             <div className="flex items-center gap-1 text-amber-500 font-semibold">
               <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-              <span>4.8</span>
-              <span className="text-slate-400 font-normal">(42 reviews)</span>
+              <span>
+                {food.averageRating
+                  ? Number(food.averageRating).toFixed(1)
+                  : "New"}
+              </span>
+              <span className="text-slate-400 font-normal">
+                ({food.reviewCount || 0}{" "}
+                {food.reviewCount === 1 ? "review" : "reviews"})
+              </span>
             </div>
 
             <span

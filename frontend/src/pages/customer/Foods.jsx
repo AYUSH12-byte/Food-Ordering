@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Search, RotateCcw, Filter, Utensils } from "lucide-react";
+import { Search, RotateCcw, Utensils } from "lucide-react";
 
 import FoodCard from "../../components/customer/FoodCard";
 import { SkeletonCard } from "../../components/ui/Skeleton";
@@ -14,6 +14,10 @@ const Foods = () => {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [availability, setAvailability] = useState("available");
+  const [minimumRating, setMinimumRating] = useState("any");
+  const [minimumPrice, setMinimumPrice] = useState("");
+  const [maximumPrice, setMaximumPrice] = useState("");
+  const [sortBy, setSortBy] = useState("newest");
 
   const fetchData = async () => {
     try {
@@ -39,12 +43,24 @@ const Foods = () => {
   }, []);
 
   const filteredFoods = useMemo(() => {
-    return foods.filter((food) => {
+    const searchTerm = search.trim().toLowerCase();
+    const filtered = foods.filter((food) => {
       const searchMatch =
-        !search || food.name.toLowerCase().includes(search.toLowerCase());
+        !searchTerm ||
+        food.name.toLowerCase().includes(searchTerm) ||
+        food.description?.toLowerCase().includes(searchTerm);
 
       const foodCategory = food.category?._id || food.category;
       const categoryMatch = !category || foodCategory === category;
+
+      const price = Number(food.price);
+      const priceMatch =
+        (minimumPrice === "" || price >= Number(minimumPrice)) &&
+        (maximumPrice === "" || price <= Number(maximumPrice));
+      const averageRating = Number(food.averageRating) || 0;
+      const ratingMatch =
+        minimumRating === "any" ||
+        averageRating >= Number(minimumRating);
 
       const availabilityMatch =
         availability === "all"
@@ -53,14 +69,54 @@ const Foods = () => {
           ? food.isAvailable
           : !food.isAvailable;
 
-      return searchMatch && categoryMatch && availabilityMatch;
+      return (
+        searchMatch &&
+        categoryMatch &&
+        priceMatch &&
+        ratingMatch &&
+        availabilityMatch
+      );
     });
-  }, [foods, search, category, availability]);
+
+    return filtered.sort((first, second) => {
+      if (sortBy === "price-low") {
+        return Number(first.price) - Number(second.price);
+      }
+      if (sortBy === "price-high") {
+        return Number(second.price) - Number(first.price);
+      }
+      if (sortBy === "rating") {
+        return (
+          (Number(second.averageRating) || 0) -
+          (Number(first.averageRating) || 0)
+        );
+      }
+      return new Date(second.createdAt) - new Date(first.createdAt);
+    });
+  }, [
+    foods,
+    search,
+    category,
+    availability,
+    minimumRating,
+    minimumPrice,
+    maximumPrice,
+    sortBy,
+  ]);
+
+  const hasInvalidPriceRange =
+    minimumPrice !== "" &&
+    maximumPrice !== "" &&
+    Number(minimumPrice) > Number(maximumPrice);
 
   const resetFilters = () => {
     setSearch("");
     setCategory("");
     setAvailability("available");
+    setMinimumRating("any");
+    setMinimumPrice("");
+    setMaximumPrice("");
+    setSortBy("newest");
   };
 
   return (
@@ -124,7 +180,7 @@ const Foods = () => {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search dish name..."
+                placeholder="Search name or description..."
                 className="w-full rounded-xl border border-slate-200 pl-10 pr-4 py-2.5 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition"
               />
             </div>
@@ -166,7 +222,85 @@ const Foods = () => {
               <option value="unavailable">Out of Stock</option>
             </select>
           </div>
+
+          {/* Minimum Rating */}
+          <div>
+            <label className="mb-1 block text-xs font-bold text-slate-700 uppercase tracking-wider">
+              Minimum Rating
+            </label>
+            <select
+              value={minimumRating}
+              onChange={(e) => setMinimumRating(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition"
+            >
+              <option value="any">Any Rating</option>
+              <option value="4">4+ Stars</option>
+              <option value="3">3+ Stars</option>
+            </select>
+          </div>
+
+          {/* Sort */}
+          <div>
+            <label className="mb-1 block text-xs font-bold text-slate-700 uppercase tracking-wider">
+              Sort By
+            </label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition"
+            >
+              <option value="newest">Newest</option>
+              <option value="price-low">Price: Low to High</option>
+              <option value="price-high">Price: High to Low</option>
+              <option value="rating">Highest Rated</option>
+            </select>
+          </div>
+
+          {/* Price Range */}
+          <div>
+            <label
+              htmlFor="minimum-price"
+              className="mb-1 block text-xs font-bold text-slate-700 uppercase tracking-wider"
+            >
+              Minimum Price
+            </label>
+            <input
+              id="minimum-price"
+              type="number"
+              min="0"
+              step="0.01"
+              value={minimumPrice}
+              onChange={(e) => setMinimumPrice(e.target.value)}
+              placeholder="Rs. 0"
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="maximum-price"
+              className="mb-1 block text-xs font-bold text-slate-700 uppercase tracking-wider"
+            >
+              Maximum Price
+            </label>
+            <input
+              id="maximum-price"
+              type="number"
+              min="0"
+              step="0.01"
+              value={maximumPrice}
+              onChange={(e) => setMaximumPrice(e.target.value)}
+              placeholder="No limit"
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition"
+            />
+          </div>
         </div>
+
+        {hasInvalidPriceRange && (
+          <p className="text-xs font-semibold text-rose-600" role="alert">
+            Minimum price cannot be greater than maximum price.
+          </p>
+        )}
 
         {/* Filter Summary */}
         <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-xs font-medium text-slate-500">
@@ -205,7 +339,7 @@ const Foods = () => {
           </div>
           <h2 className="text-lg font-bold text-slate-900">No dishes match your search</h2>
           <p className="mt-1 text-xs text-slate-500">
-            Try adjusting your search keyword or selected category filter.
+            Try changing your search, price range, rating, or other filters.
           </p>
           <button
             onClick={resetFilters}
