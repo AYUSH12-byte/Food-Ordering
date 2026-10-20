@@ -11,6 +11,7 @@ const receiptRoutes = require("./routes/receiptRoutes");
 const feedbackRoutes = require("./routes/feedbackRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const customerRoutes = require("./routes/customerRoutes");
+const favoriteRoutes = require("./routes/favoriteRoutes");
 
 const errorMiddleware = require("./middleware/errorMiddleware");
 
@@ -62,6 +63,8 @@ app.use("/api/feedback", feedbackRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
 app.use("/api/customers", customerRoutes);
+
+app.use("/api/favorites", favoriteRoutes);
 
 // 404 HANDLER
 

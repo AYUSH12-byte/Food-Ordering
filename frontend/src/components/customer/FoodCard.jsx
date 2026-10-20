@@ -1,11 +1,16 @@
 import { useState } from "react";
-import { Clock, Check, Star, ShoppingCart } from "lucide-react";
+import { Clock, Check, Heart, Star, ShoppingCart } from "lucide-react";
 
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
 import { useToast } from "../../context/ToastContext";
 
-const FoodCard = ({ food }) => {
+const FoodCard = ({
+  food,
+  isFavorite = false,
+  favoriteLoading = false,
+  onToggleFavorite,
+}) => {
   const { user } = useAuth();
   const { addToCart } = useCart();
   const toast = useToast();
@@ -67,6 +72,23 @@ const FoodCard = ({ food }) => {
               {food.category?.name || "Uncategorized"}
             </span>
           </div>
+
+          <button
+            type="button"
+            onClick={() => onToggleFavorite?.(food)}
+            disabled={favoriteLoading}
+            aria-label={
+              isFavorite
+                ? `Remove ${food.name} from favorites`
+                : `Add ${food.name} to favorites`
+            }
+            aria-pressed={isFavorite}
+            className="absolute right-3 top-3 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-rose-600 shadow-sm transition hover:scale-105 disabled:opacity-60"
+          >
+            <Heart
+              className={`h-5 w-5 ${isFavorite ? "fill-current" : ""}`}
+            />
+          </button>
 
           {/* Preparation Time Pill */}
           <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-full bg-slate-900/80 backdrop-blur-md px-2.5 py-1 text-[11px] font-medium text-white shadow-xs">

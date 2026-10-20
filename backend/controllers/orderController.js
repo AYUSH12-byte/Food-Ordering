@@ -3,6 +3,8 @@ const Cart = require("../models/Cart");
 const Payment = require("../models/Payment");
 const Receipt = require("../models/Receipt");
 const Counter = require("../models/Counter");
+const Food = require("../models/Food");
+const mongoose = require("mongoose");
 
 const DELIVERY_CHARGE = 50;
 
@@ -331,6 +333,126 @@ const getMyOrders = async (req, res) => {
   }
 };
 
+// REORDER FROM A PREVIOUS ORDER
+
+const reorderOrder = async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order ID",
+      });
+    }
+
+    const order = await Order.findOne({
+      _id: req.params.id,
+      user: req.user.id,
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    const foodIds = order.items
+      .map((item) => item.food)
+      .filter(Boolean);
+    const availableFoods = await Food.find({
+      _id: { $in: foodIds },
+      isAvailable: true,
+    });
+    const foodsById = new Map(
+      availableFoods.map((food) => [food._id.toString(), food]),
+    );
+    const addedItems = [];
+    const skippedItems = [];
+
+    for (const orderItem of order.items) {
+      const foodId = orderItem.food?.toString();
+      const food = foodId ? foodsById.get(foodId) : null;
+
+      if (!food) {
+        skippedItems.push({
+          name: orderItem.name,
+          reason: "No longer available",
+        });
+        continue;
+      }
+
+      addedItems.push({
+        food,
+        quantity: orderItem.quantity,
+      });
+    }
+
+    let cart = await Cart.findOne({ user: req.user.id });
+
+    if (addedItems.length > 0) {
+      if (!cart) {
+        cart = new Cart({
+          user: req.user.id,
+          items: [],
+        });
+      }
+
+      for (const { food, quantity } of addedItems) {
+        const existingItem = cart.items.find(
+          (item) => item.food.toString() === food._id.toString(),
+        );
+
+        if (existingItem) {
+          existingItem.quantity += quantity;
+          existingItem.price = food.price;
+        } else {
+          cart.items.push({
+            food: food._id,
+            quantity,
+            price: food.price,
+          });
+        }
+      }
+
+      cart.subtotal = cart.items.reduce(
+        (subtotal, item) => subtotal + item.price * item.quantity,
+        0,
+      );
+      await cart.save();
+    }
+
+    const populatedCart = cart
+      ? await Cart.findById(cart._id).populate({
+          path: "items.food",
+          select: "name description price image isAvailable preparationTime category",
+          populate: {
+            path: "category",
+            select: "name",
+          },
+        })
+      : { items: [], subtotal: 0 };
+
+    res.status(200).json({
+      success: true,
+      message: addedItems.length
+        ? "Available items were added to your cart"
+        : "No items from this order are currently available",
+      addedItems: addedItems.map(({ food, quantity }) => ({
+        name: food.name,
+        quantity,
+      })),
+      skippedItems,
+      cart: populatedCart,
+    });
+  } catch (error) {
+    console.error("Reorder Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to reorder items",
+    });
+  }
+};
+
 // ==========================================
 // GET SINGLE ORDER
 // ==========================================
@@ -506,6 +628,7 @@ const updateOrderStatus = async (req, res) => {
 module.exports = {
   createOrder,
   getMyOrders,
+  reorderOrder,
   getOrderById,
   getAllOrders,
   updateOrderStatus,

@@ -1,18 +1,21 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Package, ArrowRight, Clock, Sparkles } from "lucide-react";
+import { Package, ArrowRight, Clock, RotateCcw, Sparkles } from "lucide-react";
 
-import { getMyOrders } from "../../services/orderService";
+import { getMyOrders, reorderOrder } from "../../services/orderService";
 import Badge from "../../components/ui/Badge";
 import { useToast } from "../../context/ToastContext";
+import { useCart } from "../../context/CartContext";
 
 const Orders = () => {
-  const toast = useToast();
+  const { error: showError, success, warning } = useToast();
+  const { fetchCart } = useCart();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [reorderingId, setReorderingId] = useState(null);
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -21,15 +24,46 @@ const Orders = () => {
     } catch (err) {
       const msg = err.response?.data?.message || "Failed to load order history";
       setError(msg);
-      toast.error(msg);
+      showError(msg);
     } finally {
       setLoading(false);
     }
-  };
+  }, [showError]);
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [fetchOrders]);
+
+  const handleReorder = async (order) => {
+    try {
+      setReorderingId(order._id);
+      const response = await reorderOrder(order._id);
+      await fetchCart();
+
+      if (response.addedItems.length > 0) {
+        const itemCount = response.addedItems.reduce(
+          (count, item) => count + item.quantity,
+          0,
+        );
+        success(`${itemCount} item(s) added to your cart`);
+      } else {
+        warning("None of the items in this order are currently available");
+      }
+
+      if (response.skippedItems.length > 0) {
+        warning(
+          `Unavailable items skipped: ${response.skippedItems
+            .map((item) => item.name)
+            .join(", ")}`,
+          7000,
+        );
+      }
+    } catch (err) {
+      showError(err.response?.data?.message || "Failed to reorder items");
+    } finally {
+      setReorderingId(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -155,12 +189,23 @@ const Orders = () => {
                     </p>
                   </div>
 
-                  <Link
-                    to={`/orders/${order._id}`}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800 transition shadow-sm"
-                  >
-                    View Details <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleReorder(order)}
+                      disabled={reorderingId !== null}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50 px-4 py-2 text-xs font-bold text-orange-700 transition hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      {reorderingId === order._id ? "Adding..." : "Reorder"}
+                    </button>
+                    <Link
+                      to={`/orders/${order._id}`}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800 transition shadow-sm"
+                    >
+                      View Details <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
                 </div>
               </div>
             );

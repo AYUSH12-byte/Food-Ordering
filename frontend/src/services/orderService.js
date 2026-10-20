@@ -16,6 +16,11 @@ export const getMyOrders = async () => {
   return response.data;
 };
 
+export const reorderOrder = async (id) => {
+  const response = await api.post(`/orders/${id}/reorder`);
+  return response.data;
+};
+
 // GET SINGLE ORDER
 
 export const getOrderById = async (id) => {

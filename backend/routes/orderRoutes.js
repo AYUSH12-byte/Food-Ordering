@@ -3,6 +3,7 @@ const express = require("express");
 const {
   createOrder,
   getMyOrders,
+  reorderOrder,
   getOrderById,
   getAllOrders,
   updateOrderStatus,
@@ -19,6 +20,8 @@ router.use(protect);
 router.post("/", createOrder);
 
 router.get("/my-orders", getMyOrders);
+
+router.post("/:id/reorder", authorize("customer"), reorderOrder);
 
 // ADMIN
 

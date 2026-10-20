@@ -34,6 +34,13 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
 
+    favoriteFoods: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Food",
+      },
+    ],
+
     role: {
       type: String,
       enum: ["admin", "customer"],

@@ -1,12 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
-import { Search, RotateCcw, Utensils } from "lucide-react";
+import { Heart, Search, RotateCcw, Utensils } from "lucide-react";
 
 import FoodCard from "../../components/customer/FoodCard";
 import { SkeletonCard } from "../../components/ui/Skeleton";
 import { getFoods } from "../../services/foodService";
 import { getCategories } from "../../services/categoryService";
+import {
+  addFavorite,
+  getFavorites,
+  removeFavorite,
+} from "../../services/favoriteService";
+import { useAuth } from "../../context/AuthContext";
+import { useToast } from "../../context/ToastContext";
 
 const Foods = () => {
+  const { isCustomer } = useAuth();
+  const { error: showError, success, warning } = useToast();
   const [foods, setFoods] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,6 +27,10 @@ const Foods = () => {
   const [minimumPrice, setMinimumPrice] = useState("");
   const [maximumPrice, setMaximumPrice] = useState("");
   const [sortBy, setSortBy] = useState("newest");
+  const [favoriteIds, setFavoriteIds] = useState([]);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [favoriteLoadingIds, setFavoriteLoadingIds] = useState([]);
+  const [favoritesLoading, setFavoritesLoading] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -42,6 +55,57 @@ const Foods = () => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (!isCustomer) {
+      setFavoriteIds([]);
+      setFavoritesOnly(false);
+      setFavoritesLoading(false);
+      return;
+    }
+
+    setFavoritesLoading(true);
+    getFavorites()
+      .then((response) => {
+        setFavoriteIds(response.favorites.map((food) => food._id));
+      })
+      .catch((err) => {
+        showError(
+          err.response?.data?.message || "Failed to load your favorites",
+        );
+      })
+      .finally(() => {
+        setFavoritesLoading(false);
+      });
+  }, [isCustomer, showError]);
+
+  const handleFavoriteToggle = async (food) => {
+    if (!isCustomer) {
+      warning("Please log in as a customer to save favorites");
+      return;
+    }
+
+    const isFavorite = favoriteIds.includes(food._id);
+    setFavoriteLoadingIds((ids) => [...ids, food._id]);
+
+    try {
+      if (isFavorite) {
+        await removeFavorite(food._id);
+        setFavoriteIds((ids) => ids.filter((id) => id !== food._id));
+        success(`${food.name} removed from favorites`);
+      } else {
+        await addFavorite(food._id);
+        setFavoriteIds((ids) => [...ids, food._id]);
+        success(`${food.name} added to favorites`);
+      }
+    } catch (err) {
+      showError(
+        err.response?.data?.message || "Failed to update favorites",
+      );
+    } finally {
+      setFavoriteLoadingIds((ids) => ids.filter((id) => id !== food._id));
+    }
+  };
+
   const filteredFoods = useMemo(() => {
     const searchTerm = search.trim().toLowerCase();
     const filtered = foods.filter((food) => {
@@ -61,6 +125,8 @@ const Foods = () => {
       const ratingMatch =
         minimumRating === "any" ||
         averageRating >= Number(minimumRating);
+      const favoriteMatch =
+        !favoritesOnly || favoriteIds.includes(food._id);
 
       const availabilityMatch =
         availability === "all"
@@ -74,7 +140,8 @@ const Foods = () => {
         categoryMatch &&
         priceMatch &&
         ratingMatch &&
-        availabilityMatch
+        availabilityMatch &&
+        favoriteMatch
       );
     });
 
@@ -102,6 +169,8 @@ const Foods = () => {
     minimumPrice,
     maximumPrice,
     sortBy,
+    favoritesOnly,
+    favoriteIds,
   ]);
 
   const hasInvalidPriceRange =
@@ -117,6 +186,7 @@ const Foods = () => {
     setMinimumPrice("");
     setMaximumPrice("");
     setSortBy("newest");
+    setFavoritesOnly(false);
   };
 
   return (
@@ -134,6 +204,22 @@ const Foods = () => {
           Select from our hand-prepared pizzas, burgers, pastas, and sides made fresh with quality ingredients.
         </p>
       </div>
+
+      {isCustomer && (
+        <button
+          type="button"
+          aria-pressed={favoritesOnly}
+          onClick={() => setFavoritesOnly((value) => !value)}
+          className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition ${
+            favoritesOnly
+              ? "bg-rose-600 text-white"
+              : "border border-rose-200 bg-white text-rose-600 hover:bg-rose-50"
+          }`}
+        >
+          <Heart className={`h-4 w-4 ${favoritesOnly ? "fill-current" : ""}`} />
+          {favoritesOnly ? "Showing Favorites" : `My Favorites (${favoriteIds.length})`}
+        </button>
+      )}
 
       {/* Category Pills Bar */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
@@ -352,7 +438,15 @@ const Foods = () => {
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredFoods.map((food) => (
-            <FoodCard key={food._id} food={food} />
+            <FoodCard
+              key={food._id}
+              food={food}
+              isFavorite={favoriteIds.includes(food._id)}
+              favoriteLoading={
+                favoritesLoading || favoriteLoadingIds.includes(food._id)
+              }
+              onToggleFavorite={handleFavoriteToggle}
+            />
           ))}
         </div>
       )}
