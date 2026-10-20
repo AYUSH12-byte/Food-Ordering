@@ -1,12 +1,14 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { Link, useParams } from "react-router-dom";
+import { RefreshCw } from "lucide-react";
 
 import { getOrderById } from "../../services/orderService";
 
 import FeedbackForm from "../../components/customer/FeedbackForm";
 
 const statuses = ["Pending", "Preparing", "Ready", "Delivered"];
+const STATUS_REFRESH_INTERVAL = 15000;
 
 const OrderDetails = () => {
   const { id } = useParams();
@@ -16,25 +18,52 @@ const OrderDetails = () => {
   const [loading, setLoading] = useState(true);
 
   const [error, setError] = useState("");
+  const [refreshError, setRefreshError] = useState("");
 
-  const fetchOrder = async () => {
+  const fetchOrder = useCallback(async ({ silent = false } = {}) => {
     try {
-      setLoading(true);
-      setError("");
+      if (!silent) {
+        setLoading(true);
+        setError("");
+      }
 
       const response = await getOrderById(id);
 
       setOrder(response.order);
-    } catch (error) {
-      setError(error.response?.data?.message || "Failed to load order");
+      setRefreshError("");
+    } catch (fetchError) {
+      const message =
+        fetchError.response?.data?.message || "Failed to load order";
+
+      if (silent) {
+        setRefreshError("Unable to refresh order status. Retrying automatically.");
+      } else {
+        setError(message);
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchOrder();
-  }, [id]);
+  }, [fetchOrder]);
+
+  useEffect(() => {
+    if (!order || ["Delivered", "Cancelled"].includes(order.orderStatus)) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        fetchOrder({ silent: true });
+      }
+    }, STATUS_REFRESH_INTERVAL);
+
+    return () => window.clearInterval(intervalId);
+  }, [fetchOrder, order]);
 
   if (loading) {
     return (
@@ -120,13 +149,27 @@ const OrderDetails = () => {
         <div className="flex items-center justify-between gap-4">
           <h2 className="text-xl font-bold text-slate-900">Order Tracking</h2>
 
-          <Link
-            to="/orders"
-            className="hidden text-sm font-semibold text-slate-500 hover:text-slate-900 sm:block"
-          >
-            All Orders
-          </Link>
+          <div className="flex items-center gap-4">
+            {!isCancelled && order.orderStatus !== "Delivered" && (
+              <span className="hidden items-center gap-1.5 text-xs font-medium text-slate-400 sm:inline-flex">
+                <RefreshCw className="h-3.5 w-3.5" />
+                Updates every 15 seconds
+              </span>
+            )}
+            <Link
+              to="/orders"
+              className="hidden text-sm font-semibold text-slate-500 hover:text-slate-900 sm:block"
+            >
+              All Orders
+            </Link>
+          </div>
         </div>
+
+        {refreshError && (
+          <p role="status" className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
+            {refreshError}
+          </p>
+        )}
 
         {isCancelled ? (
           <div className="mt-6 rounded-lg bg-red-50 p-4 text-sm font-medium text-red-600">
