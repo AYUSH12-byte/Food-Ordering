@@ -37,11 +37,11 @@
 ### Frontend
 | Technology | Purpose |
 |---|---|
-| React 18 | UI Framework |
+| React 19 | UI Framework |
 | React Router DOM | Client-side Routing |
 | Lucide React | Icon Library |
 | Axios | HTTP Client |
-| Vanilla CSS | Styling |
+| Tailwind CSS 4 + CSS | Styling |
 
 ### Backend
 | Technology | Purpose |
@@ -88,7 +88,7 @@ food-ordering-system/
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js v18+
+- Node.js v20.19+ or v22.12+
 - MongoDB (local or Atlas)
 
 ### 1. Clone the repository
@@ -124,10 +124,13 @@ http://localhost:5173
 Create a `.env` file inside `/backend`:
 
 ```env
-PORT=5000
+PORT=7000
 MONGO_URI=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret_key
 ```
+
+The frontend defaults to `http://localhost:7000/api`. If you change the backend
+port, update `VITE_API_URL` in `/frontend/.env` to match.
 
 ---
 
@@ -159,4 +162,3 @@ This project is for educational purposes.
 ---
 
 <p align="center">Crafted with ❤️ for delicious food lovers</p>
-
