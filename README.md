@@ -21,6 +21,7 @@
 - View digital payment receipts (PDF)
 - Submit feedback and ratings
 - Manage personal profile
+- Save multiple delivery addresses and choose a default for checkout
 - Apply fixed-amount coupon codes at checkout
 
 ### 🛡️ Admin Panel
@@ -142,6 +143,9 @@ port, update `VITE_API_URL` in `/frontend/.env` to match.
 |---|---|---|
 | POST | `/api/auth/login` | Login user |
 | POST | `/api/auth/register` | Register user |
+| GET / POST | `/api/auth/addresses` | List or save the authenticated user's delivery addresses |
+| PUT / DELETE | `/api/auth/addresses/:addressId` | Update or remove a saved delivery address |
+| PUT | `/api/auth/addresses/:addressId/default` | Set a saved delivery address as default |
 | GET | `/api/foods` | Get all foods |
 | POST | `/api/orders` | Place an order |
 | GET | `/api/orders/:id` | Get order details |

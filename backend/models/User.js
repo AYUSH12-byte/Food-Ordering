@@ -1,5 +1,35 @@
 const mongoose = require("mongoose");
 
+const savedAddressSchema = new mongoose.Schema(
+  {
+    label: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 40,
+    },
+    address: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 300,
+    },
+    phone: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 30,
+    },
+    isDefault: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
+
 const userSchema = new mongoose.Schema(
   {
     name: {
@@ -32,6 +62,11 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+    },
+
+    savedAddresses: {
+      type: [savedAddressSchema],
+      default: [],
     },
 
     favoriteFoods: [

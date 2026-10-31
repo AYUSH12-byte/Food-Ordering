@@ -9,6 +9,7 @@ import {
   getAvailableCoupons,
   validateCoupon,
 } from "../../services/couponService";
+import { addAddress, getAddresses } from "../../services/profileService";
 import Button from "../../components/ui/Button";
 
 const Checkout = () => {
@@ -25,6 +26,10 @@ const Checkout = () => {
   const [availableCoupons, setAvailableCoupons] = useState([]);
   const [couponsLoading, setCouponsLoading] = useState(true);
   const [couponsError, setCouponsError] = useState("");
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState("");
+  const [saveAddress, setSaveAddress] = useState(false);
+  const [addressLabel, setAddressLabel] = useState("");
   const discountAmount = Math.min(
     Number(appliedCoupon?.discountAmount || 0),
     subtotal,
@@ -59,6 +64,33 @@ const Checkout = () => {
     };
 
     fetchAvailableCoupons();
+  }, [showError]);
+
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      try {
+        const response = await getAddresses();
+        const addresses = response.addresses || [];
+        setSavedAddresses(addresses);
+        const defaultAddress =
+          addresses.find((address) => address.isDefault) || addresses[0];
+
+        if (defaultAddress) {
+          setSelectedAddressId(defaultAddress._id);
+          setFormData((previous) => ({
+            ...previous,
+            deliveryAddress: defaultAddress.address,
+            deliveryPhone: defaultAddress.phone,
+          }));
+        }
+      } catch (err) {
+        const message =
+          err.response?.data?.message || "Failed to load saved addresses";
+        showError(message);
+      }
+    };
+
+    fetchAddresses();
   }, [showError]);
 
   const handleApplyCoupon = async (code = couponInput) => {
@@ -97,6 +129,30 @@ const Checkout = () => {
       ...prev,
       [name]: value,
     }));
+    if (name === "deliveryAddress" || name === "deliveryPhone") {
+      setSelectedAddressId("");
+    }
+  };
+
+  const handleSavedAddressChange = (event) => {
+    const addressId = event.target.value;
+    setSelectedAddressId(addressId);
+    setSaveAddress(false);
+
+    const address = savedAddresses.find((item) => item._id === addressId);
+    if (address) {
+      setFormData((previous) => ({
+        ...previous,
+        deliveryAddress: address.address,
+        deliveryPhone: address.phone,
+      }));
+    } else {
+      setFormData((previous) => ({
+        ...previous,
+        deliveryAddress: "",
+        deliveryPhone: "",
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -122,6 +178,16 @@ const Checkout = () => {
 
     try {
       setLoading(true);
+      if (saveAddress) {
+        const addressResponse = await addAddress({
+          label: addressLabel.trim(),
+          address: formData.deliveryAddress.trim(),
+          phone: formData.deliveryPhone.trim(),
+          isDefault: false,
+        });
+        setSavedAddresses(addressResponse.addresses || []);
+      }
+
       const response = await createOrder({
         deliveryAddress: formData.deliveryAddress.trim(),
         deliveryPhone: formData.deliveryPhone.trim(),
@@ -205,6 +271,32 @@ const Checkout = () => {
             </h2>
 
             <div className="space-y-4">
+              {savedAddresses.length > 0 && (
+                <div>
+                  <label
+                    htmlFor="saved-address"
+                    className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-700"
+                  >
+                    Choose a saved address
+                  </label>
+                  <select
+                    id="saved-address"
+                    value={selectedAddressId}
+                    onChange={handleSavedAddressChange}
+                    disabled={loading}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
+                  >
+                    <option value="">Enter a different address</option>
+                    {savedAddresses.map((address) => (
+                      <option key={address._id} value={address._id}>
+                        {address.label} — {address.address}
+                        {address.isDefault ? " (Default)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               {/* Address */}
               <div>
                 <label className="mb-1 block text-xs font-bold text-slate-700 uppercase tracking-wider">
@@ -218,6 +310,7 @@ const Checkout = () => {
                     onChange={handleChange}
                     rows={3}
                     placeholder="Street name, house/building number, city, area landmark..."
+                    maxLength={300}
                     disabled={loading}
                     className="w-full rounded-xl border border-slate-200 pl-10 pr-4 py-2.5 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition"
                   />
@@ -237,11 +330,44 @@ const Checkout = () => {
                     value={formData.deliveryPhone}
                     onChange={handleChange}
                     placeholder="+977 98XXXXXXXX"
+                    maxLength={30}
                     disabled={loading}
                     className="w-full rounded-xl border border-slate-200 pl-10 pr-4 py-2.5 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition"
                   />
                 </div>
               </div>
+
+              {!selectedAddressId && (
+                <div className="space-y-3 rounded-xl border border-slate-200 p-4">
+                  <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={saveAddress}
+                      onChange={(event) => setSaveAddress(event.target.checked)}
+                      disabled={loading || savedAddresses.length >= 10}
+                      className="rounded border-slate-300 text-orange-600 focus:ring-orange-500"
+                    />
+                    Save this address for future orders
+                  </label>
+                  {saveAddress && (
+                    <input
+                      type="text"
+                      value={addressLabel}
+                      onChange={(event) => setAddressLabel(event.target.value)}
+                      placeholder="Address label, e.g. Home or Office"
+                      maxLength={40}
+                      required
+                      disabled={loading}
+                      className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-200"
+                    />
+                  )}
+                  {savedAddresses.length >= 10 && (
+                    <p className="text-xs text-slate-500">
+                      You have reached the 10 saved-address limit. Manage addresses in your profile.
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Delivery Note */}
               <div>

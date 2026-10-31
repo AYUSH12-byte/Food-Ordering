@@ -6,6 +6,11 @@ import {
   getProfile,
   updateProfile,
   changePassword,
+  getAddresses,
+  addAddress,
+  updateAddress,
+  setDefaultAddress,
+  deleteAddress,
 } from "../../services/profileService";
 
 const Profile = () => {
@@ -34,6 +39,16 @@ const Profile = () => {
 
   const [success, setSuccess] = useState("");
 
+  const [addresses, setAddresses] = useState([]);
+  const [addressForm, setAddressForm] = useState({
+    label: "",
+    address: "",
+    phone: "",
+    isDefault: false,
+  });
+  const [editingAddressId, setEditingAddressId] = useState(null);
+  const [savingAddress, setSavingAddress] = useState(false);
+
   // ==========================================
   // FETCH PROFILE
   // ==========================================
@@ -43,9 +58,13 @@ const Profile = () => {
       setLoading(true);
       setError("");
 
-      const response = await getProfile();
+      const [response, addressResponse] = await Promise.all([
+        getProfile(),
+        getAddresses(),
+      ]);
 
       const profileUser = response.user;
+      setAddresses(addressResponse.addresses || []);
 
       setProfile({
         name: profileUser?.name || "",
@@ -88,6 +107,113 @@ const Profile = () => {
       ...previous,
       [name]: value,
     }));
+  };
+
+  const handleAddressInputChange = (event) => {
+    const { name, value, checked, type } = event.target;
+    setAddressForm((previous) => ({
+      ...previous,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const resetAddressForm = () => {
+    setAddressForm({
+      label: "",
+      address: "",
+      phone: "",
+      isDefault: false,
+    });
+    setEditingAddressId(null);
+  };
+
+  const applyAddressList = (nextAddresses) => {
+    setAddresses(nextAddresses);
+    const defaultAddress = nextAddresses.find((address) => address.isDefault);
+    if (defaultAddress) {
+      setProfile((previous) => ({
+        ...previous,
+        address: defaultAddress.address,
+        phone: defaultAddress.phone,
+      }));
+    }
+  };
+
+  const handleAddressSubmit = async (event) => {
+    event.preventDefault();
+    setError("");
+    setSuccess("");
+
+    try {
+      setSavingAddress(true);
+      const response = editingAddressId
+        ? await updateAddress(editingAddressId, addressForm)
+        : await addAddress(addressForm);
+
+      applyAddressList(response.addresses || []);
+      resetAddressForm();
+      setSuccess(
+        editingAddressId
+          ? "Delivery address updated successfully"
+          : "Delivery address saved successfully",
+      );
+    } catch (requestError) {
+      setError(
+        requestError.response?.data?.message ||
+          "Failed to save delivery address",
+      );
+    } finally {
+      setSavingAddress(false);
+    }
+  };
+
+  const handleEditAddress = (address) => {
+    setAddressForm({
+      label: address.label,
+      address: address.address,
+      phone: address.phone,
+      isDefault: address.isDefault,
+    });
+    setEditingAddressId(address._id);
+    setError("");
+    setSuccess("");
+  };
+
+  const handleSetDefaultAddress = async (id) => {
+    try {
+      setError("");
+      setSuccess("");
+      const response = await setDefaultAddress(id);
+      applyAddressList(response.addresses || []);
+      setSuccess("Default delivery address updated");
+    } catch (requestError) {
+      setError(
+        requestError.response?.data?.message ||
+          "Failed to update default address",
+      );
+    }
+  };
+
+  const handleDeleteAddress = async (id) => {
+    if (!window.confirm("Delete this saved delivery address?")) {
+      return;
+    }
+
+    try {
+      setError("");
+      setSuccess("");
+      const response = await deleteAddress(id);
+      applyAddressList(response.addresses || []);
+      if (editingAddressId === id) {
+        resetAddressForm();
+      }
+      setSuccess("Delivery address deleted");
+    } catch (requestError) {
+      setError(
+        requestError.response?.data?.message ||
+          "Failed to delete delivery address",
+      );
+    }
   };
 
   // ==========================================
@@ -330,6 +456,175 @@ const Profile = () => {
           </button>
         </form>
       </div>
+
+      <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900">
+            Saved Delivery Addresses
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Save up to 10 addresses and choose one as your default for checkout.
+          </p>
+        </div>
+
+        <div className="mt-5 space-y-3">
+          {addresses.map((address) => (
+            <div
+              key={address._id}
+              className="flex flex-col gap-3 rounded-xl border border-slate-200 p-4 sm:flex-row sm:items-start sm:justify-between"
+            >
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="font-semibold text-slate-900">
+                    {address.label}
+                  </h3>
+                  {address.isDefault && (
+                    <span className="rounded-full bg-orange-50 px-2.5 py-1 text-xs font-semibold text-orange-700">
+                      Default
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 text-sm text-slate-600">{address.address}</p>
+                <p className="mt-1 text-sm text-slate-500">{address.phone}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {!address.isDefault && (
+                  <button
+                    type="button"
+                    onClick={() => handleSetDefaultAddress(address._id)}
+                    className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    Make default
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleEditAddress(address)}
+                  className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteAddress(address._id)}
+                  className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+          {addresses.length === 0 && (
+            <p className="rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">
+              No saved addresses yet. Add one below.
+            </p>
+          )}
+        </div>
+
+        <form onSubmit={handleAddressSubmit} className="mt-6 space-y-4 border-t border-slate-100 pt-5">
+          <h3 className="font-semibold text-slate-900">
+            {editingAddressId ? "Edit address" : "Add a new address"}
+          </h3>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label
+                htmlFor="saved-address-label"
+                className="mb-1 block text-sm font-medium text-slate-700"
+              >
+                Label
+              </label>
+              <input
+                id="saved-address-label"
+                name="label"
+                value={addressForm.label}
+                onChange={handleAddressInputChange}
+                placeholder="Home, Office..."
+                maxLength={40}
+                required
+                disabled={savingAddress}
+                className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="saved-address-phone"
+                className="mb-1 block text-sm font-medium text-slate-700"
+              >
+                Delivery phone
+              </label>
+              <input
+                id="saved-address-phone"
+                name="phone"
+                type="tel"
+                value={addressForm.phone}
+                onChange={handleAddressInputChange}
+                placeholder="+977 98XXXXXXXX"
+                maxLength={30}
+                required
+                disabled={savingAddress}
+                className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+              />
+            </div>
+          </div>
+          <div>
+            <label
+              htmlFor="saved-address-text"
+              className="mb-1 block text-sm font-medium text-slate-700"
+            >
+              Full address
+            </label>
+            <textarea
+              id="saved-address-text"
+              name="address"
+              value={addressForm.address}
+              onChange={handleAddressInputChange}
+              placeholder="Street, building, city, and nearby landmark"
+              maxLength={300}
+              rows={3}
+              required
+              disabled={savingAddress}
+              className="w-full resize-y rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              name="isDefault"
+              checked={addressForm.isDefault}
+              onChange={handleAddressInputChange}
+              disabled={
+                savingAddress ||
+                (editingAddressId !== null && addressForm.isDefault)
+              }
+              className="rounded border-slate-300 text-orange-600 focus:ring-orange-500"
+            />
+            Set as default address
+          </label>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="submit"
+              disabled={savingAddress}
+              className="rounded-lg bg-orange-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {savingAddress
+                ? "Saving..."
+                : editingAddressId
+                  ? "Save Address"
+                  : "Add Address"}
+            </button>
+            {editingAddressId && (
+              <button
+                type="button"
+                onClick={resetAddressForm}
+                disabled={savingAddress}
+                className="rounded-lg border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        </form>
+      </section>
 
       {/* ========================================
           CHANGE PASSWORD
