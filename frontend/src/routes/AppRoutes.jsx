@@ -19,6 +19,8 @@ import CustomerPayments from "../pages/customer/Payments";
 import Receipt from "../pages/customer/Receipt";
 import CustomerFeedback from "../pages/customer/Feedback";
 import Profile from "../pages/customer/Profile";
+import EsewaSuccess from "../pages/customer/EsewaSuccess";
+import EsewaFailure from "../pages/customer/EsewaFailure";
 
 import Dashboard from "../pages/admin/Dashboard";
 import Categories from "../pages/admin/Categories";
@@ -50,6 +52,10 @@ const AppRoutes = () => {
         <Route path="/foods" element={<Foods />} />
 
         <Route path="/cart" element={<Cart />} />
+
+        <Route path="/payment/esewa/success" element={<EsewaSuccess />} />
+
+        <Route path="/payment/esewa/failure" element={<EsewaFailure />} />
       </Route>
 
       {/* ================================= */}

@@ -6,6 +6,7 @@ const Counter = require("../models/Counter");
 const Food = require("../models/Food");
 const mongoose = require("mongoose");
 const Coupon = require("../models/Coupon");
+const { createEsewaPaymentPayload } = require("../utils/esewa");
 
 const DELIVERY_CHARGE = 50;
 
@@ -64,7 +65,7 @@ const createOrder = async (req, res) => {
       });
     }
 
-    if (!["Cash on Delivery", "Online"].includes(paymentMethod)) {
+    if (!["Cash on Delivery", "Online", "eSewa"].includes(paymentMethod)) {
       return res.status(400).json({
         success: false,
         message: "Invalid payment method",
@@ -318,6 +319,11 @@ const createOrder = async (req, res) => {
 
         receiptNumber: receipt.receiptNumber,
       },
+
+      esewa:
+        paymentMethod === "eSewa"
+          ? createEsewaPaymentPayload(order._id, totalAmount)
+          : null,
     });
   } catch (error) {
     console.error("Create Order Error:", error);

@@ -182,7 +182,7 @@ const Payments = () => {
               >
                 <option value="">All Methods</option>
                 <option value="Cash on Delivery">Cash on Delivery</option>
-                <option value="Online">Online</option>
+                <option value="eSewa">eSewa</option>
               </select>
             </div>
 
@@ -254,7 +254,16 @@ const Payments = () => {
                       </td>
 
                       <td className="px-6 py-4 font-semibold text-slate-700">
-                        {payment.paymentMethod}
+                        {payment.paymentMethod === "eSewa" ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-bold text-emerald-800">
+                            <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#60bb46] text-[9px] font-black text-white">
+                              e
+                            </span>
+                            eSewa
+                          </span>
+                        ) : (
+                          payment.paymentMethod
+                        )}
                       </td>
 
                       <td className="px-6 py-4">

@@ -168,9 +168,18 @@ const Payments = () => {
                     </td>
 
                     <td className="px-6 py-5">
-                      <p className="text-sm text-slate-700">
-                        {payment.paymentMethod}
-                      </p>
+                      {payment.paymentMethod === "eSewa" ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-xs font-bold text-emerald-800">
+                          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#60bb46] text-[10px] font-black text-white">
+                            e
+                          </span>
+                          eSewa
+                        </span>
+                      ) : (
+                        <p className="text-sm text-slate-700">
+                          {payment.paymentMethod}
+                        </p>
+                      )}
                     </td>
 
                     <td className="px-6 py-5">

@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import { RefreshCw } from "lucide-react";
 
 import { getOrderById } from "../../services/orderService";
+import { initiateEsewaPayment, submitEsewaForm } from "../../services/paymentService";
 
 import FeedbackForm from "../../components/customer/FeedbackForm";
 
@@ -19,6 +20,7 @@ const OrderDetails = () => {
 
   const [error, setError] = useState("");
   const [refreshError, setRefreshError] = useState("");
+  const [payingEsewa, setPayingEsewa] = useState(false);
 
   const fetchOrder = useCallback(async ({ silent = false } = {}) => {
     try {
@@ -375,12 +377,40 @@ const OrderDetails = () => {
               </p>
             </div>
 
+            {/* Pay with eSewa if payment is still pending */}
+            {order.paymentStatus !== "Paid" && order.orderStatus !== "Cancelled" && (
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    setPayingEsewa(true);
+                    const res = await initiateEsewaPayment(order._id);
+                    if (res.esewa) {
+                      submitEsewaForm(res.esewa);
+                    }
+                  } catch (err) {
+                    console.error("eSewa Pay Error:", err);
+                    alert(err.response?.data?.message || "Failed to initiate eSewa payment");
+                  } finally {
+                    setPayingEsewa(false);
+                  }
+                }}
+                disabled={payingEsewa}
+                className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#60bb46] px-5 py-3 text-center text-sm font-bold text-white shadow-md shadow-emerald-600/20 hover:bg-[#52a43b] transition disabled:opacity-50"
+              >
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-black text-[#60bb46]">
+                  e
+                </span>
+                {payingEsewa ? "Redirecting to eSewa..." : "Pay with eSewa"}
+              </button>
+            )}
+
             {/* Receipt */}
 
             {order.receipt?._id && (
               <Link
                 to={`/receipts/${order.receipt._id}`}
-                className="mt-6 block w-full rounded-lg bg-slate-900 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800"
+                className="mt-3 block w-full rounded-xl bg-slate-900 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800 transition"
               >
                 View Receipt
               </Link>

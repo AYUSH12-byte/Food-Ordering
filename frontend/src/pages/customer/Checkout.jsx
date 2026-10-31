@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { MapPin, Phone, FileText, CreditCard, Banknote, ShieldCheck, ArrowLeft, Tag, X } from "lucide-react";
+import { MapPin, Phone, FileText, Banknote, ShieldCheck, ArrowLeft, Tag, X } from "lucide-react";
 
 import { useCart } from "../../context/CartContext";
 import { useToast } from "../../context/ToastContext";
@@ -10,6 +10,7 @@ import {
   validateCoupon,
 } from "../../services/couponService";
 import { addAddress, getAddresses } from "../../services/profileService";
+import { submitEsewaForm } from "../../services/paymentService";
 import Button from "../../components/ui/Button";
 
 const Checkout = () => {
@@ -195,6 +196,14 @@ const Checkout = () => {
         paymentMethod: formData.paymentMethod,
         couponCode: appliedCoupon?.code || "",
       });
+
+      if (formData.paymentMethod === "eSewa" && response.esewa) {
+        success("Order placed! Redirecting to eSewa payment gateway...");
+        setTimeout(() => {
+          submitEsewaForm(response.esewa);
+        }, 500);
+        return;
+      }
 
       success("Order placed successfully!");
       navigate(`/order-success/${response.order._id}`, {
@@ -415,32 +424,39 @@ const Checkout = () => {
                       <Banknote className="h-6 w-6 text-orange-600" />
                       <div>
                         <p className="text-sm font-bold text-slate-900">Cash on Delivery</p>
-                        <p className="text-[11px] text-slate-500 font-medium">Pay cash upon food arrival</p>
+                        <p className="text-[11px] text-slate-500 font-medium">Pay cash on arrival</p>
                       </div>
                     </div>
                   </label>
 
                   <label
-                    className={`flex cursor-pointer items-center gap-3.5 rounded-xl border p-4 transition ${
-                      formData.paymentMethod === "Online"
-                        ? "border-orange-500 bg-orange-50/50 ring-1 ring-orange-500"
+                    className={`relative flex cursor-pointer items-center gap-3.5 rounded-xl border p-4 transition ${
+                      formData.paymentMethod === "eSewa"
+                        ? "border-[#60bb46] bg-emerald-50/60 ring-2 ring-[#60bb46]"
                         : "border-slate-200 bg-white hover:bg-slate-50"
                     }`}
                   >
                     <input
                       type="radio"
                       name="paymentMethod"
-                      value="Online"
-                      checked={formData.paymentMethod === "Online"}
+                      value="eSewa"
+                      checked={formData.paymentMethod === "eSewa"}
                       onChange={handleChange}
                       disabled={loading}
-                      className="text-orange-600 focus:ring-orange-500"
+                      className="text-emerald-600 focus:ring-emerald-500"
                     />
                     <div className="flex items-center gap-3">
-                      <CreditCard className="h-6 w-6 text-blue-600" />
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#60bb46] text-xs font-black text-white shadow-sm">
+                        e
+                      </div>
                       <div>
-                        <p className="text-sm font-bold text-slate-900">Digital / Cards</p>
-                        <p className="text-[11px] text-slate-500 font-medium">Online portal simulation</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-bold text-slate-900">eSewa Mobile Wallet</p>
+                          <span className="rounded bg-emerald-100 px-1 py-0.2 text-[9px] font-bold text-emerald-800 uppercase tracking-wider">
+                            Popular
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 font-medium">Fast digital payment via eSewa</p>
                       </div>
                     </div>
                   </label>
